@@ -842,9 +842,9 @@ DECLARE_STATIC_KEY_FALSE(sched_uclamp_used);
 #endif /* CONFIG_UCLAMP_TASK */
 
 /*
- * This is the main, per-CPU runqueue data structure.
+ * CPU마다 할당된 메인 런큐(runqueue)를 위한 자료구조
  *
- * Locking rule: those places that want to lock multiple runqueues
+ * Locking rule: 여러 runqueue를 lock하고 싶을 때
  * (such as the load balancing or the thread migration code), lock
  * acquire operations must be ordered by ascending &runqueue.
  */
@@ -883,8 +883,8 @@ struct rq {
 #endif
 
 	struct cfs_rq		cfs;
-	struct rt_rq		rt;
-	struct dl_rq		dl;
+	struct rt_rq		rt;		// real time : RR 등이 이 runqueue를 사용할 것으로 추정 됨
+	struct dl_rq		dl;		// deadlock
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* list of leaf cfs_rq on this CPU: */
