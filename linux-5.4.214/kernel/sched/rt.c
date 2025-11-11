@@ -42,10 +42,10 @@ static enum hrtimer_restart sched_rt_period_timer(struct hrtimer *timer)
 	return idle ? HRTIMER_NORESTART : HRTIMER_RESTART;
 }
 
-void init_rt_bandwidth(struct rt_bandwidth *rt_b, u64 period, u64 runtime)
+void init_rt_bandwidth(struct rt_bandwidth *rt_b, u64 period, u64 runtime) //RT 대역폭 제어 초기화(주기와 런타임 설정) hrtimer: 주기를 관리하는 타이머
 {
-	rt_b->rt_period = ns_to_ktime(period);
-	rt_b->rt_runtime = runtime;
+	rt_b->rt_period = ns_to_ktime(period); //rt_period: 주기마다 reset, 
+	rt_b->rt_runtime = runtime; // rt_runtime: 하나의 task가 사용할 수 있는 최대 런타임 -> rt_period 동안 최대 rt_runtime만큼 실행 가능
 
 	raw_spin_lock_init(&rt_b->rt_runtime_lock);
 
@@ -54,7 +54,7 @@ void init_rt_bandwidth(struct rt_bandwidth *rt_b, u64 period, u64 runtime)
 	rt_b->rt_period_timer.function = sched_rt_period_timer;
 }
 
-static inline void do_start_rt_bandwidth(struct rt_bandwidth *rt_b)
+static inline void do_start_rt_bandwidth(struct rt_bandwidth *rt_b) //RT 대역폭 제어 시작: 타이머를 시작해 실제로 제어 활동을 시작함
 {
 	raw_spin_lock(&rt_b->rt_runtime_lock);
 	if (!rt_b->rt_period_active) {
@@ -74,7 +74,7 @@ static inline void do_start_rt_bandwidth(struct rt_bandwidth *rt_b)
 	raw_spin_unlock(&rt_b->rt_runtime_lock);
 }
 
-static void start_rt_bandwidth(struct rt_bandwidth *rt_b)
+static void start_rt_bandwidth(struct rt_bandwidth *rt_b) //RT 대역폭 제어를 시작하되, 실제 대역폭 제한 기능이 켜져 있는지 확인
 {
 	if (!rt_bandwidth_enabled() || rt_b->rt_runtime == RUNTIME_INF)
 		return;
@@ -116,10 +116,10 @@ static void destroy_rt_bandwidth(struct rt_bandwidth *rt_b)
 {
 	hrtimer_cancel(&rt_b->rt_period_timer);
 }
+//rt_se = sched_rt_entity == scheduling entity/ ex: rt의 경우 struct sched_rt_entity
+#define rt_entity_is_task(rt_se) (!(rt_se)->my_q) // sched_rt_entity가 일반 태스크인지 확인하는 매크로
 
-#define rt_entity_is_task(rt_se) (!(rt_se)->my_q)
-
-static inline struct task_struct *rt_task_of(struct sched_rt_entity *rt_se)
+static inline struct task_struct *rt_task_of(struct sched_rt_entity *rt_se) //sched_rt_entity에서 일반 태스크 포인터를 얻는 함수
 {
 #ifdef CONFIG_SCHED_DEBUG
 	WARN_ON_ONCE(!rt_entity_is_task(rt_se));
@@ -127,12 +127,12 @@ static inline struct task_struct *rt_task_of(struct sched_rt_entity *rt_se)
 	return container_of(rt_se, struct task_struct, rt);
 }
 
-static inline struct rq *rq_of_rt_rq(struct rt_rq *rt_rq)
+static inline struct rq *rq_of_rt_rq(struct rt_rq *rt_rq) // rt_rq에서 연결된 일반 런큐 포인터를 얻는 함수
 {
 	return rt_rq->rq;
 }
 
-static inline struct rt_rq *rt_rq_of_se(struct sched_rt_entity *rt_se)
+static inline struct rt_rq *rt_rq_of_se(struct sched_rt_entity *rt_se) //sched_rt_entity에서 연결된 rt_rq 포인터를 얻는 함수
 {
 	return rt_se->rt_rq;
 }
@@ -594,15 +594,16 @@ static inline struct rt_rq *group_rt_rq(struct sched_rt_entity *rt_se)
 	return NULL;
 }
 
-static inline void sched_rt_rq_enqueue(struct rt_rq *rt_rq)
+static inline void sched_rt_rq_enqueue(struct rt_rq *rt_rq) //rt_rq를 일반 런큐에 enqueue하는 함수
 {
 	struct rq *rq = rq_of_rt_rq(rt_rq);
 
 	if (!rt_rq->rt_nr_running)
 		return;
 
-	enqueue_top_rt_rq(rt_rq);
-	resched_curr(rq);
+	enqueue_top_rt_rq(rt_rq); ////RT 큐의 가장 높은 우선 순위 태스크를 일반 runqueue에 올림
+	resched_curr(rq); // 더 높은 순위의 RT 큐의 task가 생기면 preempt
+	//  rt 큐에 새로운 task가 있으니, 필요시 rt 태스크로 교체하도록
 }
 
 static inline void sched_rt_rq_dequeue(struct rt_rq *rt_rq)
