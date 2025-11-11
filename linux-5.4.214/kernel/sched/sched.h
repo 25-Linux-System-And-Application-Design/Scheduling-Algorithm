@@ -90,11 +90,14 @@ struct cpuidle_state;
 
 extern __read_mostly int scheduler_running;
 
-extern unsigned long calc_load_update;
+extern unsigned long calc_load_update; //
+//load average 를 계산함
 extern atomic_long_t calc_load_tasks;
+//시스템 전체의 활성 task 개수를 원자적으로 계산함
+//커널은 cpu의 개수에 따라 활성 task 개수를 추정함
 
-extern void calc_global_load_tick(struct rq *this_rq);
-extern long calc_load_fold_active(struct rq *this_rq, long adjust);
+extern void calc_global_load_tick(struct rq *this_rq); //매 tick마다 호출되어 현재 cpu의 rq 상태를 전역 load 상태에 반영함
+extern long calc_load_fold_active(struct rq *this_rq, long adjust); //cpu마다 활성화된 task의 수를 global load counter에 반영함
 
 /*
  * Helpers for converting nanosecond timing to jiffy resolution
@@ -154,7 +157,7 @@ extern long calc_load_fold_active(struct rq *this_rq, long adjust);
  */
 #define RUNTIME_INF		((u64)~0ULL)
 
-static inline int idle_policy(int policy)
+static inline int idle_policy(int policy) //cpu가 한가할 때만 이루어지는 정책인지 판단
 {
 	return policy == SCHED_IDLE;
 }
@@ -195,6 +198,20 @@ static inline int task_has_dl_policy(struct task_struct *p)
 
 #define cap_scale(v, s) ((v)*(s) >> SCHED_CAPACITY_SHIFT)
 
+/* 리눅스 커널은 task 별로 다른 스케쥴링 정책을 정의 할수 있음 
+	taks_struct: policy 필드의 p->policy로 저장
+	IDLE: SCHED_IDLE
+	FAIR: SCHED_NORMAL, SCHED_BATCH
+	RT: SCHED_FIFO, SCHED_RR
+	DEADLINE: SCHED_DEADLINE
+	인지 가단하게 판단하는 Helper functions
+
+	p->policy에 들어 있는 정책이 어떤 정책인지 판별하는 함수
+
+*/
+
+
+
 /*
  * !! For sched_setattr_nocheck() (kernel) only !!
  *
@@ -234,18 +251,21 @@ dl_entity_preempt(struct sched_dl_entity *a, struct sched_dl_entity *b)
  * This is the priority-queue data structure of the RT scheduling class:
  */
 struct rt_prio_array {
-	DECLARE_BITMAP(bitmap, MAX_RT_PRIO+1); /* include 1 bit for delimiter */
-	struct list_head queue[MAX_RT_PRIO];
+	DECLARE_BITMAP(bitmap, MAX_RT_PRIO+1); /* include 1 bit for delimiter 현재 사용 중인 큐를 비트 맵으로 표시*/
+	struct list_head queue[MAX_RT_PRIO]; //일반적으로 MAX_RT_PRIO = 100(include/linux/sched/prio.h->22,23번 줄)
 };
+//실시간 우선 순위별로 태스크들을 관리하기 위한 Priority Queue 자료구조
+//우선 순위를 비트맵으로 관리하고, 각 우선 순위별로 태스크 리스트를 유지함-> 같은 우선 순위는 FIOFO로 관리
 
 struct rt_bandwidth {
 	/* nests inside the rq lock: */
-	raw_spinlock_t		rt_runtime_lock;
-	ktime_t			rt_period;
-	u64			rt_runtime;
-	struct hrtimer		rt_period_timer;
-	unsigned int		rt_period_active;
+	raw_spinlock_t		rt_runtime_lock;// rt_runtime 및 rt_perio 필드 보호
+	ktime_t			rt_period; //RT 주기 1초(1,000,000,000 ns) 기본값
+	u64			rt_runtime; //하나의 task가 사용할 수 있는 최대 런타임 기본값은 0.95초
+	struct hrtimer		rt_period_timer; // period가 만료되면 타이머 인터럽트 발생시켜 runtime reset
+	unsigned int		rt_period_active; // 활성 주기 인지 확인
 };
+// Real-Time 스케쥴링 클래스의 대역폭 제어를 위한 자료구조-> 하나의 task가 사용할 수 있는 최대 런타임과 주기를 정의함
 
 void __dl_clear_params(struct task_struct *p);
 
