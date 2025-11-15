@@ -1416,7 +1416,7 @@ void activate_task(struct rq *rq, struct task_struct *p, int flags)
 
 	enqueue_task(rq, p, flags);
 
-	p->on_rq = TASK_ON_RQ_QUEUED;
+	p->on_rq = TASK_ON_RQ_QUEUED; //task가 큐에 있음을 나타냄
 }
 
 void deactivate_task(struct rq *rq, struct task_struct *p, int flags)
@@ -4042,8 +4042,8 @@ restart:
 	 * We can terminate the balance pass as soon as we know there is
 	 * a runnable task of @class priority or higher.
 	 */
-	for_class_range(class, prev->sched_class, &idle_sched_class) {
-		if (class->balance(rq, prev, rf))
+	for_class_range(class, prev->sched_class, &idle_sched_class) { //Stop ->DL->RR...->IDLE
+		if (class->balance(rq, prev, rf)) //balance
 			break;
 	}
 #endif
@@ -4051,7 +4051,7 @@ restart:
 	put_prev_task(rq, prev);
 
 	for_each_class(class) {
-		p = class->pick_next_task(rq, NULL, NULL);
+		p = class->pick_next_task(rq, NULL, NULL); //가장 우선순위 높은 태스크 선택(위에서부터아래로)
 		if (p)
 			return p;
 	}
