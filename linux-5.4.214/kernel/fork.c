@@ -2156,6 +2156,8 @@ static __latent_entropy struct task_struct *copy_process(
 		p->real_parent = current;
 		p->parent_exec_id = current->self_exec_id;
 		p->exit_signal = args->exit_signal;
+
+		
 	}
 
 	klp_copy_process(p);

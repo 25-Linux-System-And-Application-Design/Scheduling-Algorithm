@@ -3039,7 +3039,7 @@ unsigned long to_ratio(u64 period, u64 runtime)
  * that must be done for every newly created context, then puts the task
  * on the runqueue and wakes it.
  */
-void wake_up_new_task(struct task_struct *p)
+void wake_up_new_task(struct task_struct *p) //새로 만들어진 task를 처음으로 wake
 {
 	struct rq_flags rf;
 	struct rq *rq;
@@ -3055,15 +3055,16 @@ void wake_up_new_task(struct task_struct *p)
 	 * Use __set_task_cpu() to avoid calling sched_class::migrate_task_rq,
 	 * as we're not fully set-up yet.
 	 */
-	p->recent_used_cpu = task_cpu(p);
-	rseq_migrate(p);
-	__set_task_cpu(p, select_task_rq(p, task_cpu(p), SD_BALANCE_FORK, 0));
+	p->recent_used_cpu = task_cpu(p); //incldue/linux/sched.h 1818
+	rseq_migrate(p); // cpu 이동 등 incldue/linux/sched.h 1914 시간 다 되었으니 짐싸세요->작업 중지
+	__set_task_cpu(p, select_task_rq(p, task_cpu(p), SD_BALANCE_FORK, 0)); // cpu 선택 incldue/linux/sched.h 1941
 #endif
-	rq = __task_rq_lock(p, &rf);
-	update_rq_clock(rq);
-	post_init_entity_util_avg(p);
+	rq = __task_rq_lock(p, &rf); //p가 속한 rq에 락을 걸기, rf는 해제에 필요한 flag 정보 
+	update_rq_clock(rq); //rq를 업데이트
+	post_init_entity_util_avg(p); //cpu의 util average: cpu 사용량 통계를 초기화/초기로 설정
 
-	activate_task(rq, p, ENQUEUE_NOCLOCK);
+	activate_task(rq, p, ENQUEUE_NOCLOCK); //waking up a task (process/thread) and making it eligible to run on a specific CPU.
+	//TASK_NEW or TASK_WAKING to TASK_RUNNING
 	trace_sched_wakeup_new(p);
 	check_preempt_curr(rq, p, WF_FORK);
 #ifdef CONFIG_SMP
@@ -3077,7 +3078,7 @@ void wake_up_new_task(struct task_struct *p)
 		rq_repin_lock(rq, &rf);
 	}
 #endif
-	task_rq_unlock(rq, p, &rf);
+	task_rq_unlock(rq, p, &rf);//rq 락 해제
 }
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
