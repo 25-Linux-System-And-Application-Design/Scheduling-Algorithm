@@ -905,6 +905,7 @@ struct rq {
 	struct cfs_rq		cfs;	// completely fair scheduler: cfs 관련 데이터, 일반 태스크용
 	struct rt_rq		rt;		// real time : RR 등이 이 runqueue를 사용할 것으로 추정 됨
 	struct dl_rq		dl;		// deadlock -> deadline scheduling 관련?
+	struct dl_rq		dl;		// deadline
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* list of leaf cfs_rq on this CPU: */
