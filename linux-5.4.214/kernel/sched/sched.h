@@ -353,23 +353,23 @@ extern struct list_head task_groups;
 struct cfs_bandwidth {
 #ifdef CONFIG_CFS_BANDWIDTH
 	raw_spinlock_t		lock;
-	ktime_t			period;
-	u64			quota;
-	u64			runtime;
+	ktime_t			period; //cpu 사용량을 측정하는 주기
+	u64			quota; //quota cpu 사용량 제한
+	u64			runtime; // cpu 사용량
 	s64			hierarchical_quota;
 
-	u8			idle;
+	u8			idle;  //사용 중인지 idle인지 계산
 	u8			period_active;
 	u8			distribute_running;
 	u8			slack_started;
 	struct hrtimer		period_timer;
 	struct hrtimer		slack_timer;
-	struct list_head	throttled_cfs_rq;
+	struct list_head	throttled_cfs_rq; //cpu 제한, throttle 때문에 정지된 runqueue 목록
 
 	/* Statistics: */
-	int			nr_periods;
-	int			nr_throttled;
-	u64			throttled_time;
+	int			nr_periods; // period 실행 횟수
+	int			nr_throttled; // 제한 발생 횟수
+	u64			throttled_time; // 제한되어 대기한 총 시간
 #endif
 };
 
@@ -611,9 +611,9 @@ static inline int rt_bandwidth_enabled(void)
 
 /* Real-Time classes' related field in a runqueue: */
 struct rt_rq {
-	struct rt_prio_array	active;
-	unsigned int		rt_nr_running;
-	unsigned int		rr_nr_running;
+	struct rt_prio_array	active; //우선 순위별로 태스크 리스트를 관리하는 Priority Queue
+	unsigned int		rt_nr_running; // 현재 런큐에 있는 RT 태스크의 수
+	unsigned int		rr_nr_running; //현재 런큐에 있는 RR 태스크의 수
 #if defined CONFIG_SMP || defined CONFIG_RT_GROUP_SCHED
 	struct {
 		int		curr; /* highest queued rt task prio */
@@ -622,7 +622,7 @@ struct rt_rq {
 #endif
 	} highest_prio;
 #endif
-#ifdef CONFIG_SMP
+#ifdef CONFIG_SMP //Symmetric Multi-Processing ->일단은 우리 관심사인가?
 	unsigned long		rt_nr_migratory;
 	unsigned long		rt_nr_total;
 	int			overloaded;
@@ -640,8 +640,8 @@ struct rt_rq {
 #ifdef CONFIG_RT_GROUP_SCHED
 	unsigned long		rt_nr_boosted;
 
-	struct rq		*rq;
-	struct task_group	*tg;
+	struct rq		*rq;  //연결된 일반 run queue
+	struct task_group	*tg;  //cgroup 정보
 #endif
 };
 
@@ -870,13 +870,13 @@ DECLARE_STATIC_KEY_FALSE(sched_uclamp_used);
  */
 struct rq {
 	/* runqueue lock: */
-	raw_spinlock_t		lock;
+	raw_spinlock_t		lock; //런큐 보호를 위한 스핀락 -> 대부분의 변경은 락을 잡고 수행
 
 	/*
 	 * nr_running and cpu_load should be in the same cacheline because
 	 * remote CPUs use both these fields when doing load calculation.
 	 */
-	unsigned int		nr_running;
+	unsigned int		nr_running; //현재 런큐에 있는 태스크의 수
 #ifdef CONFIG_NUMA_BALANCING
 	unsigned int		nr_numa_running;
 	unsigned int		nr_preferred_running;
@@ -902,8 +902,9 @@ struct rq {
 #define UCLAMP_FLAG_IDLE 0x01
 #endif
 
-	struct cfs_rq		cfs;
+	struct cfs_rq		cfs;	// completely fair scheduler: cfs 관련 데이터, 일반 태스크용
 	struct rt_rq		rt;		// real time : RR 등이 이 runqueue를 사용할 것으로 추정 됨
+	struct dl_rq		dl;		// deadlock -> deadline scheduling 관련?
 	struct dl_rq		dl;		// deadline
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
@@ -920,26 +921,26 @@ struct rq {
 	 */
 	unsigned long		nr_uninterruptible;
 
-	struct task_struct	*curr;
-	struct task_struct	*idle;
-	struct task_struct	*stop;
-	unsigned long		next_balance;
+	struct task_struct	*curr; //현재 cpu에서 실행 중인 태스크 포인터
+	struct task_struct	*idle; // idle 태스크에 대한 포인터
+	struct task_struct	*stop; //stop 태스크에 대한 포인터
+	unsigned long		next_balance; //로드 밸런싱을 위한 값
 	struct mm_struct	*prev_mm;
 
 	unsigned int		clock_update_flags;
-	u64			clock;
+	u64			clock; //스케쥴링 타이밍/ PELT(프로세스 실행시간 기반 스케쥴링) 계산용 시계값
 	/* Ensure that all clocks are in the same cache line */
 	u64			clock_task ____cacheline_aligned;
 	u64			clock_pelt;
 	unsigned long		lost_idle_time;
 
-	atomic_t		nr_iowait;
+	atomic_t		nr_iowait; //I/O 대기 중인 태스크 수
 
 #ifdef CONFIG_MEMBARRIER
 	int membarrier_state;
 #endif
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_SMP //SMP 관련 부분
 	struct root_domain		*rd;
 	struct sched_domain __rcu	*sd;
 
@@ -958,15 +959,15 @@ struct rq {
 	struct cpu_stop_work	active_balance_work;
 
 	/* CPU of this runqueue: */
-	int			cpu;
-	int			online;
+	int			cpu; //이 runqueue가 속한 CPU 번호
+	int			online; //이 CPU가 온라인 상태인지 여부
 
-	struct list_head cfs_tasks;
+	struct list_head cfs_tasks; //CFS 태스크를 담는 리스트(해당 cpu에 있는)
 
-	struct sched_avg	avg_rt;
-	struct sched_avg	avg_dl;
+	struct sched_avg	avg_rt;  //RT 스케쥴링 클래스의 부하 추적을 위한 스케쥴링 평균
+	struct sched_avg	avg_dl; //Deadline 스케쥴링 클래스의 부하 추적을 위한 스케쥴링 평균
 #ifdef CONFIG_HAVE_SCHED_AVG_IRQ
-	struct sched_avg	avg_irq;
+	struct sched_avg	avg_irq; //IRQ 부하 추적을 위한 스케쥴링 평균
 #endif
 	u64			idle_stamp;
 	u64			avg_idle;
@@ -1731,19 +1732,20 @@ extern const u32		sched_prio_to_wmult[40];
 
 #define RETRY_TASK		((void *)-1UL)
 
-struct sched_class {
-	const struct sched_class *next;
+struct sched_class { // 스케쥴러 계층 구조를 형성함
+	const struct sched_class *next; //다음 스케쥴링 클래스에 대한 포인터
+	//만약 rt_sched_class라면 next는 fair_sched_class를 가리킴
 
 #ifdef CONFIG_UCLAMP_TASK
 	int uclamp_enabled;
 #endif
 
-	void (*enqueue_task) (struct rq *rq, struct task_struct *p, int flags);
-	void (*dequeue_task) (struct rq *rq, struct task_struct *p, int flags);
-	void (*yield_task)   (struct rq *rq);
+	void (*enqueue_task) (struct rq *rq, struct task_struct *p, int flags); // 태스크를 런큐에 추가하는 함수 포인터 각각의 정책은 자신만의 큐를 가짐
+	void (*dequeue_task) (struct rq *rq, struct task_struct *p, int flags); // 태스크를 런큐에서 제거하는 함수 포인터
+	void (*yield_task)   (struct rq *rq); // cpu에 양보
 	bool (*yield_to_task)(struct rq *rq, struct task_struct *p, bool preempt);
 
-	void (*check_preempt_curr)(struct rq *rq, struct task_struct *p, int flags);
+	void (*check_preempt_curr)(struct rq *rq, struct task_struct *p, int flags); // 선점할 지 말지-> 지금의 태스크가 더 높은 우선순위인지 검사 후 점유
 
 	/*
 	 * Both @prev and @rf are optional and may be NULL, in which case the

@@ -2339,7 +2339,7 @@ static inline void watchdog(struct rq *rq, struct task_struct *p) { }
 static void task_tick_rt(struct rq *rq, struct task_struct *p, int queued)
 {
 	struct sched_rt_entity *rt_se = &p->rt;
-
+	
 	update_curr_rt(rq);
 	update_rt_rq_load_avg(rq_clock_pelt(rq), rq, 1);
 

@@ -1913,8 +1913,8 @@ static inline void rseq_preempt(struct task_struct *t)
 /* rseq_migrate() requires preemption to be disabled. */
 static inline void rseq_migrate(struct task_struct *t)
 {
-	__set_bit(RSEQ_EVENT_MIGRATE_BIT, &t->rseq_event_mask);
-	rseq_set_notify_resume(t);
+	__set_bit(RSEQ_EVENT_MIGRATE_BIT, &t->rseq_event_mask); //몇 번째 비트가 어떤 이벤트를 나타내는지, task_struct 내부의 실제 비트 필드 / 상태 변수
+	rseq_set_notify_resume(t); //유저 공간으로 돌아가기 전에 rseq를 이벤트를 강제로 처리
 }
 
 /*
