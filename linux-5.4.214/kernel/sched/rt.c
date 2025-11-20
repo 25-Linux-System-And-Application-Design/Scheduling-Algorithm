@@ -1576,12 +1576,13 @@ static struct task_struct *_pick_next_task_rt(struct rq *rq)
 	struct rt_rq *rt_rq  = &rq->rt;
 
 	do {
-		rt_se = pick_next_rt_entity(rq, rt_rq);
+		rt_se = pick_next_rt_entity(rq, rt_rq); // 가장 높은 priority queue의 맨 앞에 있는 애를 가져옴
 		BUG_ON(!rt_se);
-		rt_rq = group_rt_rq(rt_se);
-	} while (rt_rq);
+		rt_rq = group_rt_rq(rt_se); // group이면 group이 갖고 있는 rt_rq를 가져오고, task이면 하위 group이 없으니 null값을 가져옴
+	} while (rt_rq); // 뽑은 entity가 group이면 rt_rq가 존재해서 계속 돌고, 진짜 task라면 rt_rq가 null이라서 while문 빠져나옴
+	// 여기에 도달했다면, rt_se는 group이 아닌 진짜 하나의 개별 task가 됨.
 
-	return rt_task_of(rt_se);
+	return rt_task_of(rt_se); // 내가 최종적으로 고른 entity를 field로 갖고 있는 task_struct를 return한다.
 }
 
 static struct task_struct *
@@ -1593,8 +1594,12 @@ pick_next_task_rt(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 
 	if (!sched_rt_runnable(rq))
 		return NULL;
-
-	p = _pick_next_task_rt(rq);
+    /* 
+	 * 현재 runnable task들 중에서 priority가 가장 높은 entity의 
+	 * 첫 번째 그룹의 첫 번째 그룹의 ... 첫 번째 엔티티 
+	 * 즉, 진짜 찐찐맨앞의 sched_rt_entity를 담고 있는 task_struct를 return
+	*/
+	p = _pick_next_task_rt(rq); 
 	set_next_task_rt(rq, p, true);
 	return p;
 }
