@@ -1516,8 +1516,11 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
 		rq->curr->sched_class->check_preempt_curr(rq, p, flags);
 	} else {
 		for_each_class(class) {
+			/* 새로 들어온 task의 class가 curr의 class보다 우선순위가 낮은 경우는 무시한다. */
 			if (class == rq->curr->sched_class)
 				break;
+
+			/* 새로 들어온 task의 class의 우선순위가 더 높은 경우는 해당 class로 rescheduling을 한다. */
 			if (class == p->sched_class) {
 				resched_curr(rq);
 				break;
@@ -3059,6 +3062,7 @@ void wake_up_new_task(struct task_struct *p) //새로 만들어진 task를 처�
 	rseq_migrate(p); // cpu 이동 등 incldue/linux/sched.h 1914 시간 다 되었으니 짐싸세요->작업 중지
 	__set_task_cpu(p, select_task_rq(p, task_cpu(p), SD_BALANCE_FORK, 0)); // cpu 선택 incldue/linux/sched.h 1941
 #endif
+	/* 이 rq는 복사된 p아 처음 들어있는 rq가 아니라, p가 들어가야 할 같거나 다른 rq를 가리킨다. */
 	rq = __task_rq_lock(p, &rf); //p가 속한 rq에 락을 걸기, rf는 해제에 필요한 flag 정보 
 	update_rq_clock(rq); //rq를 업데이트
 	post_init_entity_util_avg(p); //cpu의 util average: cpu 사용량 통계를 초기화/초기로 설정
@@ -3066,8 +3070,15 @@ void wake_up_new_task(struct task_struct *p) //새로 만들어진 task를 처�
 	activate_task(rq, p, ENQUEUE_NOCLOCK); //waking up a task (process/thread) and making it eligible to run on a specific CPU.
 	//TASK_NEW or TASK_WAKING to TASK_RUNNING
 	trace_sched_wakeup_new(p);
+
+	/* 새로 들어온 task의 우선순위가 더 높은 경우, 그 task가 실행될 수 있도록 rescheduling을 한다. */
 	check_preempt_curr(rq, p, WF_FORK);
 #ifdef CONFIG_SMP
+	/* 
+	 * class 안에 task_woken이 정의된 경우.
+	 * dl과 rt 말고는 task_woken이 정의되어 있지 않다.
+	 * 즉, p가 dl이나 rt인 경우에만 이를 실행한다.
+	 */
 	if (p->sched_class->task_woken) {
 		/*
 		 * Nothing relies on rq->lock after this, so its fine to
@@ -4149,6 +4160,10 @@ static void __sched notrace __schedule(bool preempt)
 		switch_count = &prev->nvcsw;
 	}
 
+	/*
+	 * next: priority가 가장 높은 task
+	 * rq에 next이후에 실행될 next_highest priority인 task를 저장해 놓음.
+	 */
 	next = pick_next_task(rq, prev, &rf);
 	clear_tsk_need_resched(prev);
 	clear_preempt_need_resched();
