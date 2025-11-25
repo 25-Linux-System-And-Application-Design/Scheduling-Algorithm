@@ -1030,15 +1030,18 @@ enqueue_top_rt_rq(struct rt_rq *rt_rq)
 
 	BUG_ON(&rq->rt != rt_rq);
 
+	/* run queue(group)이 상위 runqueue에 등록되어 있으면 return */
 	if (rt_rq->rt_queued)
 		return;
 
+	/* group이 throttle 상태이면 return */
 	if (rt_rq_throttled(rt_rq))
 		return;
 
+	/* group의 runnable task의 개수가 0이 아니면 rq에 task 개수 더하기 */
 	if (rt_rq->rt_nr_running) {
 		add_nr_running(rq, rt_rq->rt_nr_running);
-		rt_rq->rt_queued = 1;
+		rt_rq->rt_queued = 1; // 등록값 비트 설정
 	}
 
 	/* Kick cpufreq (see the comment in kernel/sched/sched.h). */
@@ -1226,6 +1229,7 @@ void dec_rt_tasks(struct sched_rt_entity *rt_se, struct rt_rq *rt_rq)
  */
 static inline bool move_entity(unsigned int flags)
 {
+	/* 8 & (2 | 4) == 1000 & 0110 == 0 -> return true */
 	if ((flags & (DEQUEUE_SAVE | DEQUEUE_MOVE)) == DEQUEUE_SAVE)
 		return false;
 
@@ -1250,10 +1254,9 @@ static void __enqueue_rt_entity(struct sched_rt_entity *rt_se, unsigned int flag
 	struct list_head *queue = array->queue + rt_se_prio(rt_se);
 
 	/*
-	 * Don't enqueue the group if its throttled, or when empty.
-	 * The latter is a consequence of the former when a child group
-	 * get throttled and the current group doesn't have any other
-	 * active members.
+	 * 현재 entity가 group을 갖고 있는데,
+	 * group이 throttle 상태거나 task가 없으면 enqueue하지 않고 return한다.
+	 * 그런데 entity가 이미 on_list 상태이면 return하기 전에 해당 entity를 제거한다.
 	 */
 	if (group_rq && (rt_rq_throttled(group_rq) || !group_rq->rt_nr_running)) {
 		if (rt_se->on_list)
@@ -1263,12 +1266,14 @@ static void __enqueue_rt_entity(struct sched_rt_entity *rt_se, unsigned int flag
 
 	if (move_entity(flags)) {
 		WARN_ON_ONCE(rt_se->on_list);
-		if (flags & ENQUEUE_HEAD)
+		if (flags & ENQUEUE_HEAD) // ENQUEUE_NOCLOCK = 8이므로 8 & 16 == 0
 			list_add(&rt_se->run_list, queue);
 		else
 			list_add_tail(&rt_se->run_list, queue);
 
+		/* group안에 있는 최고 priority값을 bitmap에서 1로 변경 */
 		__set_bit(rt_se_prio(rt_se), array->bitmap);
+		/* 해당 group의 on_list값 1로 할당 */
 		rt_se->on_list = 1;
 	}
 	rt_se->on_rq = 1;
@@ -1318,7 +1323,7 @@ static void enqueue_rt_entity(struct sched_rt_entity *rt_se, unsigned int flags)
 {
 	struct rq *rq = rq_of_rt_se(rt_se);
 
-	dequeue_rt_stack(rt_se, flags);
+	dequeue_rt_stack(rt_se, flags); // 내가 지정한 scheduling entity의 최상단에 있는 entity가 갖고 있는 자식들 다 빼기
 	for_each_sched_rt_entity(rt_se)
 		__enqueue_rt_entity(rt_se, flags);
 	enqueue_top_rt_rq(&rq->rt);
