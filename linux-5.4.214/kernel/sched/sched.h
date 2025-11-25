@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+/* spdx-license-identifier: gpl-2.0 */
 /*
  * Scheduler internal types and methods:
  */
@@ -612,8 +612,8 @@ static inline int rt_bandwidth_enabled(void)
 /* Real-Time classes' related field in a runqueue: */
 struct rt_rq {
 	struct rt_prio_array	active; //우선 순위별로 태스크 리스트를 관리하는 Priority Queue
-	unsigned int		rt_nr_running; // 현재 런큐에 있는 RT 태스크의 수
-	unsigned int		rr_nr_running; //현재 런큐에 있는 RR 태스크의 수
+	unsigned int		rt_nr_running; // 현재 런큐에 있는 전체(FIFO+RR) runnable 태스크의 수
+	unsigned int		rr_nr_running; //현재 런큐에 있는 RR runnable 태스크의 수
 #if defined CONFIG_SMP || defined CONFIG_RT_GROUP_SCHED
 	struct {
 		int		curr; /* highest queued rt task prio */
@@ -629,9 +629,19 @@ struct rt_rq {
 	struct plist_head	pushable_tasks;
 
 #endif /* CONFIG_SMP */
-	int			rt_queued;
+	/*
+	 * CPU에게 "처리할 task가 있는지" 알려주는 bit (0: 실행할 task 없음, 1: 실행할 task 있음)
+	 * rt_nr_running > 0이면 '보통'은 1로 설정
+	 * rt_throttled = 1로 설정되면 실행 불가 상태이기 때문에 0으로 설정됨
+	 */
+	int			rt_queued; 
 
-	int			rt_throttled;
+	/* 
+	 * RT 대역폭 제한에 따른 영업 정지 bit (0: 영업 가능, 1: 영업 정)
+	 * 하나의 group이 할당된 시간을 다 써버리면 rt_throttled = 1로 설정됨
+	 * rt_throttled = 1로 설정되면, 스케줄러가 해당 group을 무시하고 실행시켜 주지 않음.
+	 */
+	int			rt_throttled; 
 	u64			rt_time;
 	u64			rt_runtime;
 	/* Nests inside the rq lock: */
