@@ -637,7 +637,7 @@ struct rt_rq {
 	int			rt_queued; 
 
 	/* 
-	 * RT 대역폭 제한에 따른 영업 정지 bit (0: 영업 가능, 1: 영업 정)
+	 * RT 대역폭 제한에 따른 영업 정지 bit (0: 영업 가능, 1: 영업 정지)
 	 * 하나의 group이 할당된 시간을 다 써버리면 rt_throttled = 1로 설정됨
 	 * rt_throttled = 1로 설정되면, 스케줄러가 해당 group을 무시하고 실행시켜 주지 않음.
 	 */
