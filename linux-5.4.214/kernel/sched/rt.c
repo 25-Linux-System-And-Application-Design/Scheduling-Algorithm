@@ -1323,6 +1323,12 @@ static void enqueue_rt_entity(struct sched_rt_entity *rt_se, unsigned int flags)
 {
 	struct rq *rq = rq_of_rt_se(rt_se);
 
+	/* 
+	 * 새로 들어온 entity의 priority가 가장 높은 경우,
+	 * 부모 entity들이 원래 있던 priority의 list에서 
+	 * 새로 들어온 entity의 priority에 해당하는 list로 들어가야 하니까,
+	 * 새로운 entity의 모든 부모를 rt_rq에서 빼고 다시 집어넣는다.
+	 */
 	dequeue_rt_stack(rt_se, flags); // 내가 지정한 scheduling entity의 최상단에 있는 entity가 갖고 있는 자식들 다 빼기
 	for_each_sched_rt_entity(rt_se)
 		__enqueue_rt_entity(rt_se, flags);
