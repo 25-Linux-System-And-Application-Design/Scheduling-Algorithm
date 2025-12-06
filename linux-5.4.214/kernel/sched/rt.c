@@ -1572,21 +1572,21 @@ static void print_all_tasks(struct rt_rq* rt_rq, int height)
 {
 	int i;
 	for(i = 99 ; i >= 0 ; i--){
-		if(!rt_rq->active.bitmap[i]) continue;
+		if(!(rt_rq->active).bitmap[i]) continue;
 		
 		struct list_head *list;
-		for(list = (&(rt_rq->active))->queue + i ; list ; list->next) {
+		for(list = ((&(rt_rq->active))->queue + i)->next ; list ; list->next) {
 			struct sched_rt_entity *rt_se;
 			struct task_struct *p;
 
-			rt_se = container_of(list, struct sched_rt_entity, run_list);
-			p = container_of(rt_se, struct task_struct, rt);
+			rt_se = list_entry(list, struct sched_rt_entity, run_list);
+			p = rt_task_of(rt_se);
 
 			if(rt_se->my_q) {
-				printk("This is group. priority = %d, height = %d\n");
+				printk("This is group. priority = %d, height = %d\n", p->rt_priority, height);
 				print_all_tasks(rt_se->my_q, height + 1);
 			} else {
-				printk("This is task. priority = %d, height = %d\n");
+				printk("This is task. priority = %d, height = %d\n", p->rt_priority, height);
 			}
 		}
 	}
