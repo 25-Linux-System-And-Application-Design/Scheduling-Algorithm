@@ -1567,10 +1567,40 @@ static struct sched_rt_entity *pick_next_rt_entity(struct rq *rq,
 	return next;
 }
 
+/* 내가 쓴 코드 */
+static void print_all_tasks(struct rt_rq* rt_rq, int height)
+{
+	int i;
+	for(i = 99 ; i >= 0 ; i--){
+		if(!rt_rq->active.bitmap[i]) continue;
+		
+		struct list_head *list;
+		for(list = (&(rt_rq->active))->queue + i ; list ; list->next) {
+			struct sched_rt_entity *rt_se;
+			struct task_struct *p;
+
+			rt_se = container_of(list, struct sched_rt_entity, run_list);
+			p = container_of(rt_se, struct task_struct, rt);
+
+			if(rt_se->my_q) {
+				printk("This is group. priority = %d, height = %d\n");
+				print_all_tasks(rt_se->my_q, height + 1);
+			} else {
+				printk("This is task. priority = %d, height = %d\n");
+			}
+		}
+	}
+}
+/* 여기까지 */
+
 static struct task_struct *_pick_next_task_rt(struct rq *rq)
 {
 	struct sched_rt_entity *rt_se;
 	struct rt_rq *rt_rq  = &rq->rt;
+
+	/* 여기는 내가 쓴 코드 */
+	print_all_tasks(rt_rq, 1);
+	/* 여기까지 */
 
 	do {
 		rt_se = pick_next_rt_entity(rq, rt_rq);
